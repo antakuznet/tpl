@@ -5,8 +5,8 @@
 int CLK = 6;
 int DIO = 7;
 
-int encoderPin1 = 4;
-int encoderPin2 = 3;
+int encoderPin1 = 3;
+int encoderPin2 = 4;
 int buttonPin = 5;
 
 int servoPin = 2;
@@ -19,22 +19,27 @@ int aState;
 int aLastState;  
 int timer = 0;
 
+bool isLocked = false;
+
 BfButton btn(BfButton::STANDALONE_DIGITAL, buttonPin, true, LOW);
 
 void lockClose(void) {
   //Sends a signal for the servo to go to the 180 degrees position
-  servoMotor.write(180);
+  servoMotor.write(90);
+  isLocked = true;
   delay(1000);
   }
 
 void lockOpen(void) { 
   //Sends a signal for the servo to go to the 0 degrees position
-  servoMotor.write(90);
+  servoMotor.write(180);
+  isLocked = false;
   delay(1000);
   }
 
 //Button press hanlding function
 void pressHandler (BfButton *btn, BfButton::press_pattern_t pattern) {
+  if (!isLocked) {
   switch (pattern) {
     case BfButton::SINGLE_PRESS:
       lockClose();
@@ -47,7 +52,7 @@ void pressHandler (BfButton *btn, BfButton::press_pattern_t pattern) {
     case BfButton::LONG_PRESS:
       timer = 0;
       break;
-  }
+  }}
 }
 
 void setup() {
@@ -65,7 +70,7 @@ void setup() {
   aLastState = digitalRead(encoderPin1);
 
   //Attaches the pin to the servo object
-  servoMotor.attach(servoPin, 500, 2450);
+  servoMotor.attach(servoPin);
 
   lockOpen();
   
@@ -83,25 +88,34 @@ void loop() {
   //Wait for button press to execute commands
   btn.read();
 
+  if (!isLocked) {
   aState = digitalRead(encoderPin1);
 
   //Encoder rotation tracking
-  if (aState != aLastState){     
+  if (aState != aLastState) {     
      if (digitalRead(encoderPin2) != aState) { 
-       timer ++;
+       timer = timer + 10;
      }
      else {
-       timer --;
+       timer = timer - 10;
      }
-     if (timer >= 100 ) {
-       timer = 100;
+     if (timer >= 9990 ) {
+       timer = 9990;
      }
      if (timer <= 0 ) {
        timer = 0;
      } 
   }   
   aLastState = aState;
-  
+  } else {
+      if (timer > 0 ) {
+        timer--;
+        delay(1000);
+      }
+      else { 
+          lockOpen();
+        }
+    }
 
     displayNumber(timer);
    
